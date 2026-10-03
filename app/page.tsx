@@ -1,69 +1,167 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
 
 export default function Home() {
+  const [jobDescription, setJobDescription] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("bidforge-theme");
+
+    if (savedTheme === "dark" || savedTheme === "light") {
+      setTheme(savedTheme);
+
+      if (savedTheme === "dark") {
+        document.documentElement.classList.add("dark");
+      }
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+
+    setTheme(newTheme);
+    localStorage.setItem("bidforge-theme", newTheme);
+
+    if (newTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
+
+  const handleAnalyze = () => {
+    if (!jobDescription.trim()) return;
+
+    sessionStorage.setItem("bidforge-job", jobDescription);
+    window.location.href = "/analyze";
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-white text-gray-900 transition-colors dark:bg-[#08090d] dark:text-white">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+        <div className="text-xl font-semibold tracking-tight">
+          <span>Bid</span>
+          <span className="text-blue-500">Forge</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <div className="flex items-center gap-3">
+          <button className="hidden rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 transition hover:border-gray-300 hover:text-gray-900 sm:block dark:border-white/10 dark:text-gray-300 dark:hover:border-white/20 dark:hover:text-white">
+            How it works
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:border-white/20 dark:hover:bg-white/[0.08]"
+            aria-label={
+              theme === "dark"
+                ? "Switch to light mode"
+                : "Switch to dark mode"
+            }
+            title={
+              theme === "dark"
+                ? "Switch to light mode"
+                : "Switch to dark mode"
+            }
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+            {theme === "dark" ? "☀️" : "🌙"}
+          </button>
+        </div>
+      </nav>
+
+      <section className="mx-auto flex max-w-5xl flex-col items-center px-6 pb-24 pt-20 text-center">
+        <div className="mb-6 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-600 dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-300">
+          Freelance opportunity intelligence
+        </div>
+
+        <h1 className="max-w-4xl text-5xl font-semibold leading-tight tracking-tight sm:text-6xl">
+          Know before you bid.
+          <br />
+          <span className="text-blue-500 dark:text-blue-400">
+            Build better proposals.
+          </span>
+        </h1>
+
+        <p className="mt-6 max-w-2xl text-lg leading-8 text-gray-600 dark:text-gray-400">
+          Paste a freelance job or client brief. BidForge analyzes the
+          opportunity, identifies potential concerns, and helps you build a
+          personalized proposal.
+        </p>
+
+        <div className="mt-12 w-full max-w-3xl">
+          <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-xl shadow-gray-200/60 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-2xl dark:shadow-black/20">
+            <textarea
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Paste an Upwork job or client brief here..."
+              className="min-h-[220px] w-full resize-none rounded-xl bg-transparent p-5 text-base text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-600"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+            <div className="flex flex-col items-center justify-between gap-4 border-t border-gray-200 px-3 pt-3 sm:flex-row dark:border-white/10">
+              <span className="text-sm text-gray-500">
+                Free to try • No credit card
+              </span>
+
+              <button
+                onClick={handleAnalyze}
+                disabled={!jobDescription.trim()}
+                className="rounded-xl bg-blue-500 px-6 py-3 font-medium text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-blue-400"
+              >
+                Analyze Opportunity →
+              </button>
+            </div>
+          </div>
         </div>
-      </main>
+
+        <div className="mt-6 text-sm text-gray-500 dark:text-gray-600">
+          Try a real job description to see what BidForge finds.
+        </div>
+      </section>
+
+      <section className="border-t border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/[0.02]">
+        <div className="mx-auto grid max-w-6xl gap-6 px-6 py-20 md:grid-cols-3">
+          <Feature
+            title="Opportunity Analysis"
+            description="Understand the requirements, scope, budget information, and potential concerns before spending time on a proposal."
+          />
+
+          <Feature
+            title="Personalized Proposals"
+            description="Build proposals around your actual skills, experience, projects, and portfolio instead of generic AI text."
+          />
+
+          <Feature
+            title="Freelancer Knowledge Base"
+            description="Keep your professional experience in one place so future proposals can become faster and more relevant."
+          />
+        </div>
+      </section>
+
+      <footer className="border-t border-gray-200 px-6 py-8 text-center text-sm text-gray-500 dark:border-white/10 dark:text-gray-600">
+        © {new Date().getFullYear()} BidForge
+      </footer>
+    </main>
+  );
+}
+
+function Feature({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none">
+      <h2 className="text-lg font-medium text-gray-900 dark:text-white">
+        {title}
+      </h2>
+
+      <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-500">
+        {description}
+      </p>
     </div>
   );
 }
