@@ -1,41 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { useBidForgeTheme } from "@/app/theme-provider";
 
 export default function Home() {
   const [jobDescription, setJobDescription] = useState("");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("bidforge-theme");
-
-    if (savedTheme === "dark" || savedTheme === "light") {
-      setTheme(savedTheme);
-
-      if (savedTheme === "dark") {
-        document.documentElement.classList.add("dark");
-      }
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-
-    setTheme(newTheme);
-    localStorage.setItem("bidforge-theme", newTheme);
-
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
+  const { theme, toggleTheme } = useBidForgeTheme();
+  const router = useRouter();
 
   const handleAnalyze = () => {
     if (!jobDescription.trim()) return;
 
     sessionStorage.setItem("bidforge-job", jobDescription);
-    window.location.href = "/analyze";
+    router.push("/analyze");
   };
 
   return (

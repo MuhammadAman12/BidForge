@@ -93,32 +93,21 @@ const SKILLS = [
   "SaaS development",
 ];
 
-function findMatches(text: string, list: string[]) {
-  const lowerText = text.toLowerCase();
-
-  return list.filter((item) =>
-    lowerText.includes(item.toLowerCase()),
-  );
-}
-
 function normalize(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9+#.]+/g, " ")
-    .trim();
+  return value.toLowerCase().replace(/[^a-z0-9+#.]+/g, " ").trim();
 }
 
+// Match complete terms: Java is not JavaScript; generic shared words are not evidence.
 function containsTerm(text: string, term: string) {
   const normalizedText = normalize(text);
   const normalizedTerm = normalize(term);
+  if (!normalizedTerm) return false;
+  const escaped = normalizedTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^a-z0-9+#])${escaped}(?=$|[^a-z0-9+#])`).test(normalizedText);
+}
 
-  return (
-    normalizedText.includes(normalizedTerm) ||
-    normalizedTerm
-      .split(" ")
-      .filter(Boolean)
-      .some((word) => word.length >= 4 && normalizedText.includes(word))
-  );
+function findMatches(text: string, list: string[]) {
+  return list.filter(item => containsTerm(text, item));
 }
 
 function extractBudget(text: string) {
@@ -127,6 +116,8 @@ function extractBudget(text: string) {
     /budget\s*[:\-]?\s*\$?[\d,]+\s*[-–]\s*\$?[\d,]+/i,
     /€[\d,]+\s*[-–]\s*€[\d,]+/i,
     /£[\d,]+\s*[-–]\s*£[\d,]+/i,
+    /[$€£]\s*\d[\d,]*(?:\.\d{1,2})?(?:\s*(?:\/\s*(?:hr|hour)|per\s+hour))?/i,
+    /budget\s*[:\-]?\s*\d[\d,]*(?:\.\d{1,2})?(?:\s*(?:USD|EUR|GBP))?/i,
   ];
 
   for (const pattern of patterns) {
@@ -623,5 +614,17 @@ export function analyzeOpportunityWithKnowledgeBase(
     ...baseAnalysis,
     ...knowledgeAnalysis,
     knowledgeBaseUsed: true,
+    proposalStrategy: [
+      knowledgeAnalysis.matchedSkills.length
+        ? `Highlight the listed evidence for ${knowledgeAnalysis.matchedSkills.slice(0, 5).join(", ")}.`
+        : "Explain your approach without claiming skills or experience that are absent from your Knowledge Base.",
+      knowledgeAnalysis.relevantProjects.length
+        ? `Consider referencing ${knowledgeAnalysis.relevantProjects.join(", ")} after confirming its relevance.`
+        : "Do not claim similar project experience without supporting examples.",
+      knowledgeAnalysis.missingSkills.length
+        ? `Clarify your capability for ${knowledgeAnalysis.missingSkills.join(", ")} before committing.`
+        : "Confirm the deliverables before estimating the work.",
+      baseAnalysis.concerns.length ? "Resolve scope concerns with the client before agreeing on price or timeline." : "",
+    ].filter(Boolean).join(" "),
   };
 }
