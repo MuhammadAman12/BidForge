@@ -27,10 +27,17 @@ export function runAnalysis(description: string, context: AnalysisContext) {
   return analyzeOpportunityWithKnowledgeBase(description, context.knowledgeBase);
 }
 export async function saveAnalyzedOpportunity(input: { title: string; description: string; source: string }, analysis: OpportunityAnalysis, context: AnalysisContext) {
+  if (!input.title.trim() || !input.description.trim()) {
+    throw new Error("Enter an opportunity title and description before saving.");
+  }
+  if (input.title.length > 200 || input.source.length > 200 || input.description.length > 30000) {
+    throw new Error("The opportunity exceeds the supported input length.");
+  }
   const { data, error } = await supabase.from("opportunities").insert({
     profile_id: context.profileId, title: input.title.trim(), job_description: input.description.trim(), source: input.source.trim() || null,
     budget: analysis.budget, timeline: analysis.timeline, project_type: analysis.projectType, analysis, status: "analyzed",
   }).select("id").single();
   if (error) throw error;
+  if (!data?.id) throw new Error("The server did not return the saved opportunity ID. Check your opportunities before retrying.");
   return data.id as number;
 }

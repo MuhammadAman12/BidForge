@@ -20,7 +20,11 @@ export function useOpportunityAnalysis() {
     loadAnalysisContext().then(value => {
       if (cancelled) return;
       setContext(value);
-      setInput(current => ({ ...current, description: sessionStorage.getItem("bidforge-job") ?? "" }));
+      // Browser storage is optional; privacy settings must not disable analysis.
+      try {
+        const description = sessionStorage.getItem("bidforge-job") ?? "";
+        setInput(current => ({ ...current, description }));
+      } catch { /* The user can still paste the brief manually. */ }
     }).catch(err => {
       if (cancelled) return;
       if (err instanceof SignInRequired) router.replace("/login");
@@ -40,7 +44,9 @@ export function useOpportunityAnalysis() {
     savingRef.current = true; setSaving(true); setError("");
     try {
       const id = await saveAnalyzedOpportunity(input, analysis, context);
-      sessionStorage.removeItem("bidforge-job");
+      // The database write succeeded. A storage exception must not invite a
+      // retry that inserts a second opportunity.
+      try { sessionStorage.removeItem("bidforge-job"); } catch { /* Optional cache. */ }
       router.push(`/opportunity/${id}`);
     } catch (err) { setError(message(err)); }
     finally { savingRef.current = false; setSaving(false); }

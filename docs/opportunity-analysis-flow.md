@@ -38,3 +38,12 @@ Manual checks with the configured project:
 
 Automated build checks may use placeholder environment values; this does not
 verify the live schema, authentication or row-level security policies.
+
+## Service regression coverage
+
+The suite now contains 11 tests: five analyzer tests and six mocked service tests.
+Service checks cover signed-out loading, authenticated profile filters, query
+errors, saved payloads, invalid input and failed/missing save responses. These
+are contract checks, not proof that the live database enforces row-level security.
+Optional session storage failures no longer prevent analysis or make a successful
+save appear to have failed.
