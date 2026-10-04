@@ -1,8 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+
+import Link from "next/link";
+
+import { useBidForgeTheme } from "@/app/theme-provider";
 
 type Mode = "login" | "signup";
 
@@ -13,37 +17,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const { theme, toggleTheme } = useBidForgeTheme();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("bidforge-theme");
-
-    if (savedTheme === "dark" || savedTheme === "light") {
-      setTheme(savedTheme);
-
-      if (savedTheme === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-
-    setTheme(newTheme);
-    localStorage.setItem("bidforge-theme", newTheme);
-
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -107,7 +84,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-white text-gray-900 transition-colors dark:bg-[#08090d] dark:text-white">
       <nav className="border-b border-gray-200 dark:border-white/10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <a
+          <Link
             href="/"
             className="text-xl font-semibold tracking-tight"
           >
@@ -115,7 +92,7 @@ export default function LoginPage() {
             <span className="text-blue-500 dark:text-blue-400">
               Forge
             </span>
-          </a>
+          </Link>
 
           <button
             type="button"
@@ -257,12 +234,12 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-6 text-center">
-            <a
+            <Link
               href="/"
               className="text-sm text-gray-500 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
             >
               ← Back to BidForge
-            </a>
+            </Link>
           </div>
         </div>
       </section>

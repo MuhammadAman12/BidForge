@@ -50,11 +50,13 @@ type OpportunityAnalysis = {
   experienceMatch?: string[];
   matchedSkills?: string[];
   relevantExperience?: string[];
+  relevantProjects?: string[];
   matchedTechnologies?: string[];
   requirements?: string[];
   concerns?: string[];
   missingInformation?: string[];
   questionsToAsk?: string[];
+  questions?: string[];
   proposalStrategy?: string;
 };
 
@@ -92,33 +94,18 @@ function generateProposal(
   projects: Project[],
   analysis: OpportunityAnalysis
 ): string {
-  const matchedSkillNames =
-    analysis.matchedSkills ??
-    analysis.skillMatch ??
-    [];
+  const matchedSkillNames = analysis.matchedSkills ?? analysis.skillMatch ?? [];
 
   const verifiedSkills = skills.filter((skill) =>
     matchedSkillNames.some(
       (matchedSkill) =>
-        matchedSkill.toLowerCase().includes(skill.skill_name.toLowerCase()) ||
-        skill.skill_name.toLowerCase().includes(matchedSkill.toLowerCase())
+        matchedSkill.toLowerCase() === skill.skill_name.toLowerCase()
     )
   );
 
-  const relevantProjects = projects.filter((project) => {
-    const projectText = [
-      project.project_name,
-      project.description,
-      project.client_industry,
-      ...(project.technologies ?? []),
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    return matchedSkillNames.some((skill) =>
-      projectText.includes(skill.toLowerCase())
-    );
-  });
+  const relevantProjects = projects.filter(project =>
+    (analysis.relevantProjects ?? []).includes(project.project_name)
+  );
 
   const skillsText =
     verifiedSkills.length > 0
@@ -144,12 +131,12 @@ function generateProposal(
 
 I’d be interested in helping with ${opportunity.title}.
 
-Based on your requirements, I can contribute using ${skillsText}. I’ve worked on projects involving similar technical and business requirements, with a focus on delivering practical and reliable solutions rather than just implementing isolated features.
+${verifiedSkills.length ? `My listed skills relevant to this brief include ${skillsText}.` : "I would like to clarify the required skills and assess my fit before committing."} I would first confirm the scope and deliverables before committing to the implementation.
 
 ${
   projectsText
     ? `A relevant example from my experience is ${projectsText}, which gives me practical exposure to this type of work.`
-    : "I can also provide relevant examples of my previous work based on the specific scope you need."
+    : "I would be happy to discuss the requirements and clarify where my experience fits the work."
 }
 
 My approach would be to first confirm the key requirements and expected outcome, then break the work into clear implementation steps so progress and deliverables remain easy to track.
@@ -183,30 +170,6 @@ export default function ProposalPage() {
 
   const [saveMessage, setSaveMessage] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const storedOpportunityId = sessionStorage.getItem(
-      "bidforge-opportunity-id"
-    );
-
-    if (!storedOpportunityId) {
-      setError(
-        "No opportunity was selected. Please return to the dashboard and open an opportunity."
-      );
-      setLoading(false);
-      return;
-    }
-
-    const parsedId = Number(storedOpportunityId);
-
-    if (!Number.isFinite(parsedId)) {
-      setError("The selected opportunity ID is invalid.");
-      setLoading(false);
-      return;
-    }
-
-    loadProposalWorkspace(parsedId);
-  }, []);
 
   async function loadProposalWorkspace(selectedOpportunityId: number) {
     try {
@@ -429,14 +392,40 @@ export default function ProposalPage() {
     }
   }
 
+  useEffect(() => {
+    async function initialize() {
+      await Promise.resolve();
+    const storedOpportunityId = sessionStorage.getItem(
+      "bidforge-opportunity-id"
+    );
+
+    if (!storedOpportunityId) {
+      setError(
+        "No opportunity was selected. Please return to the dashboard and open an opportunity."
+      );
+      setLoading(false);
+      return;
+    }
+
+    const parsedId = Number(storedOpportunityId);
+
+    if (!Number.isFinite(parsedId)) {
+      setError("The selected opportunity ID is invalid.");
+      setLoading(false);
+      return;
+    }
+
+    loadProposalWorkspace(parsedId);
+    }
+    void initialize();
+  }, []);
+
+
   const analysis = useMemo<OpportunityAnalysis>(() => {
     return (opportunity?.analysis ?? {}) as OpportunityAnalysis;
   }, [opportunity]);
 
-  const matchedSkillNames =
-    analysis.matchedSkills ??
-    analysis.skillMatch ??
-    [];
+  const matchedSkillNames = useMemo(() => analysis.matchedSkills ?? analysis.skillMatch ?? [], [analysis]);
 
   const verifiedSkills = useMemo(() => {
     return skills.filter((skill) =>
@@ -964,9 +953,9 @@ export default function ProposalPage() {
               </p>
 
               <div className="mt-4 space-y-3">
-                {analysis.questionsToAsk &&
-                analysis.questionsToAsk.length > 0 ? (
-                  analysis.questionsToAsk.map((question, index) => (
+                {(analysis.questions ?? analysis.questionsToAsk) &&
+                (analysis.questions ?? analysis.questionsToAsk ?? []).length > 0 ? (
+                  (analysis.questions ?? analysis.questionsToAsk ?? []).map((question, index) => (
                     <div
                       key={`${question}-${index}`}
                       className="flex gap-3"

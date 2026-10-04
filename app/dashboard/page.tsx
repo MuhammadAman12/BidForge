@@ -591,7 +591,7 @@ function EmptyOpportunities() {
 
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500 dark:text-gray-400">
         Paste a freelance job description into BidForge and
-        we'll analyze it against your real experience.
+        we&apos;ll analyze it against your real experience.
       </p>
 
       <a
