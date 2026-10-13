@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { supabase } from "@/lib/supabase";
+import { generateProposal } from "@/lib/proposal";
+import { analyzeOpportunityWithKnowledgeBase } from "@/lib/analyzer";
 
 type Profile = {
   id: string;
@@ -86,68 +88,6 @@ type ProposalVersion = {
   content: string;
   created_at: string;
 };
-
-function generateProposal(
-  opportunity: Opportunity,
-  profile: Profile,
-  skills: Skill[],
-  projects: Project[],
-  analysis: OpportunityAnalysis
-): string {
-  const matchedSkillNames = analysis.matchedSkills ?? analysis.skillMatch ?? [];
-
-  const verifiedSkills = skills.filter((skill) =>
-    matchedSkillNames.some(
-      (matchedSkill) =>
-        matchedSkill.toLowerCase() === skill.skill_name.toLowerCase()
-    )
-  );
-
-  const relevantProjects = projects.filter(project =>
-    (analysis.relevantProjects ?? []).includes(project.project_name)
-  );
-
-  const skillsText =
-    verifiedSkills.length > 0
-      ? verifiedSkills
-          .slice(0, 5)
-          .map((skill) => skill.skill_name)
-          .join(", ")
-      : "the relevant technologies and requirements";
-
-  const projectsText =
-    relevantProjects.length > 0
-      ? relevantProjects
-          .slice(0, 2)
-          .map((project) => project.project_name)
-          .join(" and ")
-      : "";
-
-  const strategy =
-    analysis.proposalStrategy ??
-    "Focus on the client's stated requirements, demonstrate relevant experience, and keep the proposal concise and specific.";
-
-  return `Hi,
-
-I’d be interested in helping with ${opportunity.title}.
-
-${verifiedSkills.length ? `My listed skills relevant to this brief include ${skillsText}.` : "I would like to clarify the required skills and assess my fit before committing."} I would first confirm the scope and deliverables before committing to the implementation.
-
-${
-  projectsText
-    ? `A relevant example from my experience is ${projectsText}, which gives me practical exposure to this type of work.`
-    : "I would be happy to discuss the requirements and clarify where my experience fits the work."
-}
-
-My approach would be to first confirm the key requirements and expected outcome, then break the work into clear implementation steps so progress and deliverables remain easy to track.
-
-${strategy}
-
-I’d be happy to discuss the project further and clarify any details that are still open.
-
-Best regards,
-${profile.full_name}`;
-}
 
 export default function ProposalPage() {
   const router = useRouter();
@@ -315,8 +255,7 @@ export default function ProposalPage() {
           loadedOpportunity,
           profileData as Profile,
           loadedSkills,
-          loadedProjects,
-          (loadedOpportunity.analysis ?? {}) as OpportunityAnalysis
+          loadedProjects
         );
 
         const { data: createdProposal, error: createProposalError } =
@@ -363,22 +302,8 @@ export default function ProposalPage() {
 
       setVersions(loadedVersions);
 
-      /*
-       * Prefer version history when available.
-       * Otherwise use the current proposal_text from the existing
-       * proposals table.
-       */
-      if (loadedVersions.length > 0) {
-        setProposalText(loadedVersions[0].content);
-      } else {
-        setProposalText(currentProposal.proposal_text);
-
-        /*
-         * Existing proposals created before versioning may not have
-         * a proposal_versions row yet. We leave that alone until the
-         * user explicitly clicks Save Draft.
-         */
-      }
+      // History is optional; the saved proposal is the authoritative current draft.
+      setProposalText(currentProposal.proposal_text);
     } catch (workspaceError) {
       console.error("Proposal workspace error:", workspaceError);
 
@@ -409,7 +334,7 @@ export default function ProposalPage() {
 
     const parsedId = Number(storedOpportunityId);
 
-    if (!Number.isFinite(parsedId)) {
+    if (!Number.isSafeInteger(parsedId) || parsedId <= 0) {
       setError("The selected opportunity ID is invalid.");
       setLoading(false);
       return;
@@ -425,38 +350,20 @@ export default function ProposalPage() {
     return (opportunity?.analysis ?? {}) as OpportunityAnalysis;
   }, [opportunity]);
 
-  const matchedSkillNames = useMemo(() => analysis.matchedSkills ?? analysis.skillMatch ?? [], [analysis]);
+  const currentEvidence = useMemo(() => analyzeOpportunityWithKnowledgeBase(
+    opportunity?.job_description ?? "",
+    { profile: null, skills, projects, certifications: [], portfolioLinks: [] },
+  ), [opportunity, skills, projects]);
 
-  const verifiedSkills = useMemo(() => {
-    return skills.filter((skill) =>
-      matchedSkillNames.some(
-        (matchedSkill) =>
-          matchedSkill
-            .toLowerCase()
-            .includes(skill.skill_name.toLowerCase()) ||
-          skill.skill_name
-            .toLowerCase()
-            .includes(matchedSkill.toLowerCase())
-      )
-    );
-  }, [skills, matchedSkillNames]);
+  const verifiedSkills = useMemo(() => skills.filter(skill =>
+    analyzeOpportunityWithKnowledgeBase(opportunity?.job_description ?? "", {
+      profile: null, skills: [skill], projects: [], certifications: [], portfolioLinks: [],
+    }).matchedSkills.length > 0
+  ), [opportunity, skills]);
 
-  const relevantProjects = useMemo(() => {
-    return projects.filter((project) => {
-      const projectText = [
-        project.project_name,
-        project.description,
-        project.client_industry,
-        ...(project.technologies ?? []),
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return matchedSkillNames.some((skill) =>
-        projectText.includes(skill.toLowerCase())
-      );
-    });
-  }, [projects, matchedSkillNames]);
+  const relevantProjects = useMemo(() => projects.filter(project =>
+    currentEvidence.relevantProjects.includes(project.project_name)
+  ), [projects, currentEvidence]);
 
   async function saveDraft() {
     if (!proposal || !profile || !opportunity) {
@@ -505,6 +412,8 @@ export default function ProposalPage() {
         );
       }
 
+      setProposal(updatedProposal as Proposal);
+
       /*
        * Then create a version snapshot.
        */
@@ -522,10 +431,11 @@ export default function ProposalPage() {
 
       if (versionError || !newVersion) {
         throw new Error(
-          versionError?.message ||
-            "Proposal was updated, but its version could not be saved."
+          "Your draft was saved, but its history snapshot could not be saved. Reopening will show your saved draft. Please retry Save Draft to create a snapshot."
         );
       }
+
+      setVersions((currentVersions) => [newVersion as ProposalVersion, ...currentVersions]);
 
       /*
        * Mark the opportunity as having a drafted proposal.
@@ -544,13 +454,6 @@ export default function ProposalPage() {
           `Proposal saved, but opportunity status could not be updated: ${opportunityUpdateError.message}`
         );
       }
-
-      setProposal(updatedProposal as Proposal);
-
-      setVersions((currentVersions) => [
-        newVersion as ProposalVersion,
-        ...currentVersions,
-      ]);
 
       setSaveMessage(
         `Draft saved successfully as Version ${nextVersionNumber}.`
@@ -582,8 +485,7 @@ export default function ProposalPage() {
         opportunity,
         profile,
         skills,
-        projects,
-        analysis
+        projects
       );
 
       setProposalText(generated);

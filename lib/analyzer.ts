@@ -94,7 +94,13 @@ const SKILLS = [
 ];
 
 function normalize(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9+#.]+/g, " ").trim();
+  return value.toLowerCase()
+    .replace(/\breact(?:\.js|js)\b/g, "react")
+    .replace(/\bnext(?:\.js|js)\b/g, "next.js")
+    .replace(/\bnode(?:\.js|js)\b/g, "node.js")
+    .replace(/\bpostgres\b/g, "postgresql")
+    .replace(/\btailwind(?:css| css)?\b/g, "tailwind css")
+    .replace(/[^a-z0-9+#.]+/g, " ").trim();
 }
 
 // Match complete terms: Java is not JavaScript; generic shared words are not evidence.
